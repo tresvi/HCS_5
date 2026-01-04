@@ -8,8 +8,8 @@ using System.Threading;
 namespace HCS.WinService
 {
 
-    //!! Con este decorador se logró pasar de 83332 msjes a 116089 en prueba de carga 30 segundos c/1000 hilos.
-    //Resultados tomados con la consulta de cliente de CU2 en la prueba de carga mencionada (0 fallos, duracion total: 56 segundos)
+    //Esta configuración eleva el throughput notablemente, de 80K en 30seg a 116K
+    //Resultado de test de carga con la consulta a "??" con 1000 hilos en 30 seg.
     [ServiceBehavior(
         InstanceContextMode = InstanceContextMode.PerCall,
         ConcurrencyMode = ConcurrencyMode.Multiple,
