@@ -7,6 +7,14 @@ using System.Threading;
 
 namespace HCS.WinService
 {
+
+    //!! Con este decorador se logró pasar de 83332 msjes a 116089 en prueba de carga 30 segundos c/1000 hilos.
+    //Resultados tomados con la consulta de cliente de CU2 en la prueba de carga mencionada (0 fallos, duracion total: 56 segundos)
+    [ServiceBehavior(
+        InstanceContextMode = InstanceContextMode.PerCall,
+        ConcurrencyMode = ConcurrencyMode.Multiple,
+        UseSynchronizationContext = false
+    )]
     public class ConectorBrokerWCF: IConectorBrokerWCF
     {
         static int _connectionCounter = 0;
