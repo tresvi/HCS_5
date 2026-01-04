@@ -7,40 +7,52 @@ using System.Threading;
 
 namespace HCS.WinService
 {
-
     //Esta configuración eleva el throughput notablemente, de 80K en 30seg a 116K
-    //Resultado de test de carga con la consulta a "??" con 1000 hilos en 30 seg.
+    //Resultado de test de carga con la consulta a "$PING$" en "??" con 1000 hilos en 30 seg.
     [ServiceBehavior(
         InstanceContextMode = InstanceContextMode.PerCall,
         ConcurrencyMode = ConcurrencyMode.Multiple,
         UseSynchronizationContext = false
     )]
-    public class ConectorBrokerWCF: IConectorBrokerWCF
+    public class ConectorBrokerWCF : IConectorBrokerWCF
     {
-        static int _connectionCounter = 0;
-        static long _txCounter = 0;
+        static int _openConnCounter = 0;
+        static long _txsCounter = 0;
+        static long _connCounterMax = 0;
+        static readonly string _respuetaPing = $"ok - {Environment.MachineName}";
+        const string UNKNOWN_COMMAND_RESPONSE = "Comando no reconocido";
 
         public BindingList<WCFMensaje> EnviarRecibir(WCFMensaje msgMensaje, string strDestino)
         {
-            BindingList<WCFMensaje> lmReturn = new BindingList<WCFMensaje>();
+            BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
             try
             {
-                Interlocked.Increment(ref _connectionCounter);
-                Interlocked.Increment(ref _txCounter);
+                Interlocked.Increment(ref _openConnCounter);
+                Interlocked.Increment(ref _txsCounter);
+                if (_openConnCounter > _connCounterMax) Interlocked.Exchange(ref _connCounterMax, _openConnCounter);
 
+                //Thread.Sleep(10000);
+                string request = Encoding.ASCII.GetString(msgMensaje.Contenido);
                 //Console.WriteLine($"strDestino: {strDestino}");
                 //Console.WriteLine($"msgMensaje: {System.Text.Encoding.ASCII.GetString(msgMensaje.Contenido)}");
 
-                string respuesta;
+                string respuesta = "";
 
-                if (strDestino == "??")
-                    respuesta = $"#Conexiones: {_connectionCounter},  #MsjesEnviados: {_txCounter}";
+                if (strDestino.Trim() == "??")
+                {
+                    if (request.Trim() == "$PING$")
+                        respuesta = _respuetaPing;
+                    else if (request.Trim() == "$STATUS$")
+                        respuesta = $"#Conexiones activas: {_openConnCounter}, #MsjesEnviados: {_txsCounter}, MaxConnCounter: {_connCounterMax}";
+                    else
+                        respuesta = UNKNOWN_COMMAND_RESPONSE;
+                }
                 else
                     respuesta = $"ECO de {msgMensaje}";
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
-                WCFMensaje msje1 = new WCFMensaje() { Contenido = respuestaBytes };
-                lmReturn.Add(msje1);
+                WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
+                responses.Add(msje1);
 
                 /*
                 IConector oCon = new ConectorBase();
@@ -57,10 +69,9 @@ namespace HCS.WinService
             finally
             {
                 //No hay forma de que no pase por aca
-                Interlocked.Decrement(ref _connectionCounter);
-             //   Console.WriteLine(_connectionCounter);
+                Interlocked.Decrement(ref _openConnCounter);
             }
-            return lmReturn;
+            return responses;
         }
 
     }
