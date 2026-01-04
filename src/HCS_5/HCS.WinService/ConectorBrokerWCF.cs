@@ -55,22 +55,94 @@ namespace HCS.WinService
                     respuesta = $"ECO de {msgMensaje}";
                 }
 
-             //   for (int i = 0; i < 20; i++)
-             //   {
-              //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
-                    if (channel.State == CommunicationState.Closed)
+                // Crear cts fuera del using para que viva mientras los handlers puedan ejecutarse
+                CancellationTokenSource cts = null;
+                EventHandler closedHandler = null;
+                EventHandler faultedHandler = null;
+                
+                try
+                {
+                    if (channel != null)
                     {
-                        Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
-                        throw new Exception("Conexion cerrada por el cliente"); 
+                        cts = new CancellationTokenSource();
+                        
+                        // Guardar referencias de los handlers para poder desasignarlos
+                        closedHandler = (s, e) => 
+                        {
+                            try
+                            {
+                                Debug.WriteLine("******SE CANCELAAAAA - Closed******");
+                                cts?.Cancel();
+                            }
+                            catch { }
+                        };
+                        
+                        faultedHandler = (s, e) => 
+                        {
+                            try
+                            {
+                                Debug.WriteLine("******SE CANCELAAAAA - Faulted******");
+                                cts?.Cancel();
+                            }
+                            catch { }
+                        };
+                        
+                        // Asignar handlers
+                        channel.Closed += closedHandler;
+                        channel.Faulted += faultedHandler;
                     }
 
-                //    Thread.Sleep(1000);
-                //}
+                    // Aquí iría tu lógica de procesamiento largo
+                    // IMPORTANTE: Verificar periódicamente si el cliente se desconectó
+                    // para evitar procesar trabajo innecesario
+                    
+                    // Ejemplo de procesamiento largo con verificación de cancelación:
+                    
+                    /*
+                    for (int i = 0; i < 20; i++)
+                    {
+                        // Verificar si el cliente se desconectó antes de continuar
+                        if (cts?.Token.IsCancellationRequested == true)
+                        {
+                            throw new OperationCanceledException("Cliente desconectado");
+                        }
+                        
+                        // Verificar estado del canal (opcional, pero útil)
+                        if (channel != null && channel.State != CommunicationState.Opened)
+                        {
+                            throw new OperationCanceledException($"Canal en estado: {channel.State}");
+                        }
+                        
+                        // Tu lógica de procesamiento aquí
+                        // ProcesarAlgoLargo();
+                        
+                        Thread.Sleep(1000);
+                    }
+                    */
+                    byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
+                    WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
+                    responses.Add(msje1);
 
-                byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
-                WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
-                responses.Add(msje1);
-
+                }
+                finally
+                {
+                    // SIEMPRE desasignar los handlers antes de salir
+                    if (channel != null)
+                    {
+                        if (closedHandler != null)
+                        {
+                            channel.Closed -= closedHandler;
+                        }
+                        if (faultedHandler != null)
+                        {
+                            channel.Faulted -= faultedHandler;
+                        }
+                    }
+                    
+                    // Dispose del cts solo después de desasignar handlers
+                    cts?.Dispose();
+                }
+                
                 /*
                 IConector oCon = new ConectorBase();
                 BNA.FU.HCS.Mensaje oMsg = new BNA.FU.HCS.Mensaje();
@@ -78,6 +150,12 @@ namespace HCS.WinService
                 oMsg.Contenido = msgMensaje.Contenido;
                 lmReturn = ConvertDataContract(oCon.EnviarRecibir(oMsg, strDestino));
                 */
+            }
+            catch (OperationCanceledException)
+            {
+                // Cliente se desconectó durante el procesamiento
+                Debug.WriteLine("Operación cancelada - cliente desconectado");
+                throw new FaultException("Operación cancelada por desconexión del cliente");
             }
             catch (Exception e)
             {
@@ -93,15 +171,6 @@ namespace HCS.WinService
             return responses;
         }
 
-        void Cancel(CancellationTokenSource cts)
-        {
-            try
-            {
-                Debug.WriteLine("******SE CANCELAAAAA******");
-                cts.Cancel();
-            }
-            catch { }
-        }
 
     }
 }
