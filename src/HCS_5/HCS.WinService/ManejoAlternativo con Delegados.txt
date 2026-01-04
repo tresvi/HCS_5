@@ -1,0 +1,110 @@
+﻿Este enfoque se probó, pero hacia cosas raras. Se llamaba a Cancel() aparentemente 1 vez por cada mensaje enviado, y luego
+se ejecutaba dicha funcion al fianl de todo, cuando se terminaba la prueba de carga.
+La carga era tan grande que la CPU se iba de viaje y el cliente se terminaba cerrando abruptamente.
+Puede que tenga potencial, pero hay que estudiarlo y depurarlo.
+
+
+    //Esta configuración eleva el throughput notablemente, de 80K en 30seg a 116K
+    //Resultado de test de carga con la consulta a "$PING$" en "??" con 1000 hilos en 30 seg.
+    [ServiceBehavior(
+        InstanceContextMode = InstanceContextMode.PerCall,
+        ConcurrencyMode = ConcurrencyMode.Multiple,
+        UseSynchronizationContext = false
+    )]
+    public class ConectorBrokerWCF : IConectorBrokerWCF
+    {
+        static int _openConnCounter = 0;
+        static long _txsCounter = 0;
+        static long _connCounterMax = 0;
+        static readonly string _respuetaPing = $"ok - {Environment.MachineName}";
+        const string UNKNOWN_COMMAND_RESPONSE = "Comando no reconocido";
+
+        public BindingList<WCFMensaje> EnviarRecibir(WCFMensaje msgMensaje, string strDestino)
+        {
+            BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
+            var channel = OperationContext.Current?.Channel;
+
+            using (var cts = new CancellationTokenSource())
+            {
+                if (channel != null)
+                {
+                    channel.Closed += (s, e) => Cancel(cts);
+                    channel.Faulted += (s, e) => Cancel(cts);
+                }
+
+
+                try
+                {
+                    Interlocked.Increment(ref _openConnCounter);
+                    Interlocked.Increment(ref _txsCounter);
+                    if (_openConnCounter > _connCounterMax) Interlocked.Exchange(ref _connCounterMax, _openConnCounter);
+
+                    //Thread.Sleep(10000);
+                    string request = Encoding.ASCII.GetString(msgMensaje.Contenido);
+                    //Console.WriteLine($"strDestino: {strDestino}");
+                    //Console.WriteLine($"msgMensaje: {System.Text.Encoding.ASCII.GetString(msgMensaje.Contenido)}");
+
+                    string respuesta = "";
+
+                    if (strDestino.Trim() == "??")
+                    {
+                        if (request.Trim() == "$PING$")
+                            respuesta = _respuetaPing;
+                        else if (request.Trim() == "$STATUS$")
+                            respuesta = $"#Conexiones activas: {_openConnCounter}, #MsjesEnviados: {_txsCounter}, MaxConnCounter: {_connCounterMax}";
+                        else
+                            respuesta = UNKNOWN_COMMAND_RESPONSE;
+                    }
+                    else
+                        respuesta = $"ECO de {msgMensaje}";
+
+                
+
+                    
+                    for (int i = 0; i < 20; i++)
+                    {
+                        Debug.WriteLine($"Channel State: {channel.State.ToString()}");
+                       
+                        cts.Token.ThrowIfCancellationRequested();
+                        Thread.Sleep(1000);
+                    }
+                    
+
+                    byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
+                    WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
+                    responses.Add(msje1);
+
+                    /*
+                    IConector oCon = new ConectorBase();
+                    BNA.FU.HCS.Mensaje oMsg = new BNA.FU.HCS.Mensaje();
+                    oMsg.ID        = msgMensaje.ID;
+                    oMsg.Contenido = msgMensaje.Contenido;
+                    lmReturn = ConvertDataContract(oCon.EnviarRecibir(oMsg, strDestino));
+                    */
+                }
+                catch (Exception e)
+                {
+                    throw new FaultException(e.Message);
+                }
+                finally
+                {
+                    //No hay forma de que no pase por aca
+                    Interlocked.Decrement(ref _openConnCounter);
+                    channel.Closed -= (s, e) => Cancel(cts);
+                    channel.Faulted -= (s, e) => Cancel(cts);
+                }
+            }
+            return responses;
+        }
+
+        void Cancel(CancellationTokenSource cts)
+        {
+            try
+            {
+                Debug.WriteLine("******SE CANCELAAAAA******");
+                cts.Cancel();
+            }
+            catch { }
+        }
+
+    }

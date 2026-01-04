@@ -1,6 +1,7 @@
 ﻿using BNA.FU.HCS;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.ServiceModel;
 using System.Text;
 using System.Threading;
@@ -25,6 +26,8 @@ namespace HCS.WinService
         public BindingList<WCFMensaje> EnviarRecibir(WCFMensaje msgMensaje, string strDestino)
         {
             BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
+            IContextChannel channel = OperationContext.Current?.Channel;
+
             try
             {
                 Interlocked.Increment(ref _openConnCounter);
@@ -48,7 +51,21 @@ namespace HCS.WinService
                         respuesta = UNKNOWN_COMMAND_RESPONSE;
                 }
                 else
+                { 
                     respuesta = $"ECO de {msgMensaje}";
+                }
+
+             //   for (int i = 0; i < 20; i++)
+             //   {
+              //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
+                    if (channel.State == CommunicationState.Closed)
+                    {
+                        Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
+                        throw new Exception("Conexion cerrada por el cliente"); 
+                    }
+
+                //    Thread.Sleep(1000);
+                //}
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
                 WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
@@ -64,6 +81,7 @@ namespace HCS.WinService
             }
             catch (Exception e)
             {
+                Console.WriteLine($"Excepcion: {e.Message}");
                 throw new FaultException(e.Message);
             }
             finally
@@ -71,7 +89,18 @@ namespace HCS.WinService
                 //No hay forma de que no pase por aca
                 Interlocked.Decrement(ref _openConnCounter);
             }
+
             return responses;
+        }
+
+        void Cancel(CancellationTokenSource cts)
+        {
+            try
+            {
+                Debug.WriteLine("******SE CANCELAAAAA******");
+                cts.Cancel();
+            }
+            catch { }
         }
 
     }
