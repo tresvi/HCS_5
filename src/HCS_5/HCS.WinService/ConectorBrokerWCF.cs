@@ -1,25 +1,34 @@
 ﻿using BNA.FU.HCS;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.ServiceModel;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace HCS.WinService
 {
     public class ConectorBrokerWCF: IConectorBrokerWCF
     {
+        static int _connectionCounter = 0;
+        static long _txCounter = 0;
 
         public BindingList<WCFMensaje> EnviarRecibir(WCFMensaje msgMensaje, string strDestino)
         {
             BindingList<WCFMensaje> lmReturn = new BindingList<WCFMensaje>();
             try
             {
-                Console.WriteLine($"strDestino: {strDestino}");
-                Console.WriteLine($"msgMensaje: {System.Text.Encoding.ASCII.GetString(msgMensaje.Contenido)}");
-                string respuesta = $"ECO de {msgMensaje}";
+                Interlocked.Increment(ref _connectionCounter);
+                Interlocked.Increment(ref _txCounter);
+
+                //Console.WriteLine($"strDestino: {strDestino}");
+                //Console.WriteLine($"msgMensaje: {System.Text.Encoding.ASCII.GetString(msgMensaje.Contenido)}");
+
+                string respuesta;
+
+                if (strDestino == "??")
+                    respuesta = $"#Conexiones: {_connectionCounter},  #MsjesEnviados: {_txCounter}";
+                else
+                    respuesta = $"ECO de {msgMensaje}";
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
                 WCFMensaje msje1 = new WCFMensaje() { Contenido = respuestaBytes };
@@ -37,22 +46,14 @@ namespace HCS.WinService
             {
                 throw new FaultException(e.Message);
             }
+            finally
+            {
+                //No hay forma de que no pase por aca
+                Interlocked.Decrement(ref _connectionCounter);
+             //   Console.WriteLine(_connectionCounter);
+            }
             return lmReturn;
         }
 
-        /*
-        private BindingList<WCFMensaje> ConvertDataContract(List<BNA.FU.HCS.Mensaje> lmReturn)
-        {
-            BindingList<WCFMensaje> lmsgRet = new BindingList<WCFMensaje>();
-            foreach (BNA.FU.HCS.Mensaje oMsg in lmReturn)
-            {
-                WCFMensaje oMsgWCF = new WCFMensaje();
-                oMsgWCF.ID = oMsg.ID;
-                oMsgWCF.Contenido = oMsg.Contenido;
-                lmsgRet.Add(oMsgWCF);
-            }
-            return lmsgRet;
-        }
-        */
     }
 }
