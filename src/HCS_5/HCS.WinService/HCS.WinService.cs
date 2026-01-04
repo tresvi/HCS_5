@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.ServiceModel;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace HCS.WinService
     public partial class HCSWinService : ServiceBase
     {
         const string SERVICE_NAME = "BNA - Host Communications Service 5.0";
+        internal static ServiceHost HCSServiceHost = null;
 
         public HCSWinService()
         {
@@ -31,12 +33,20 @@ namespace HCS.WinService
 
         public void Start(string[] args)
         {
-            // Aquí va la lógica de inicio del servicio
+            int processId = Process.GetCurrentProcess().Id;
+            Console.WriteLine($"PID del proceso: {processId}");
+            
+            HCSServiceHost = new ServiceHost(typeof(ConectorBrokerWCF));
+        //    HCSServiceHost.Opened += new EventHandler(HCSServiceHost_Opened);
+        //    HCSServiceHost.Closed += new EventHandler(HCSServiceHost_Closed);
+        //    HCSServiceHost.Faulted += new EventHandler(HCSServiceHost_Error);
+            HCSServiceHost.Open();
         }
 
         public void Stop()
         {
-            // Aquí va la lógica de detención del servicio
+            if (HCSServiceHost.State != CommunicationState.Closed)
+                HCSServiceHost.Close();
         }
 
         void HCSServiceHost_Error(object sender, EventArgs e)
@@ -47,6 +57,7 @@ namespace HCS.WinService
             }
             EventLog.WriteEntry(SERVICE_NAME, "Fallo en el servicio WCF.");
         }
+
         void HCSServiceHost_Opened(object sender, EventArgs e)
         {
             if (!EventLog.SourceExists(SERVICE_NAME))
@@ -55,6 +66,7 @@ namespace HCS.WinService
             }
             EventLog.WriteEntry(SERVICE_NAME, "Los servicios WCF están en modo Abierto.");
         }
+
         void HCSServiceHost_Closed(object sender, EventArgs e)
         {
             if (!EventLog.SourceExists(SERVICE_NAME))
@@ -63,5 +75,6 @@ namespace HCS.WinService
             }
             EventLog.WriteEntry(SERVICE_NAME, "Los servicios WCF están en modo Cerrado.");
         }
+
     }
 }
