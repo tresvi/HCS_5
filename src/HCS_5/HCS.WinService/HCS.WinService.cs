@@ -40,7 +40,17 @@ namespace HCS.WinService
         //    HCSServiceHost.Opened += new EventHandler(HCSServiceHost_Opened);
         //    HCSServiceHost.Closed += new EventHandler(HCSServiceHost_Closed);
         //    HCSServiceHost.Faulted += new EventHandler(HCSServiceHost_Error);
-            HCSServiceHost.Open();
+            
+            try
+            {
+                HCSServiceHost.Open();
+                Console.WriteLine("ServiceHost abierto correctamente.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al abrir ServiceHost: {ex.Message}");
+                throw;
+            }
         }
 
         public void Stop()
