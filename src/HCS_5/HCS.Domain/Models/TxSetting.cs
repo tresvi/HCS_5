@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace HCS.Domain
+﻿namespace HCS.Domain.Models
 {
-    public class Class1
+    public class TxSetting
     {
 
     }

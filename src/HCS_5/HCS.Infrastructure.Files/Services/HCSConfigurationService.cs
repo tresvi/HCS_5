@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace HCS.Connectors.Abstractions.Interfaces
+namespace HCS.Infrastructure.Files.Services
 {
-    internal interface IConnector
+    internal class HCSConfigurationService
     {
     }
 }

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace HCS.Connectors.Abstractions.Models
+namespace HCS.Infrastructure.Files.Services
 {
-    internal class ConnectorParams
+    internal class ServiceSecurityService
     {
     }
 }

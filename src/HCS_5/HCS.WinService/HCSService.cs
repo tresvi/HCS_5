@@ -15,7 +15,7 @@ namespace HCS.WinService
         ConcurrencyMode = ConcurrencyMode.Multiple,
         UseSynchronizationContext = false
     )]
-    public class ConectorBrokerWCF : IConectorBrokerWCF
+    public class HCSService : IConectorBrokerWCF
     {
         static int _openConnCounter = 0;
         static long _txsCounter = 0;

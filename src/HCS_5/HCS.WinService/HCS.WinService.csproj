@@ -47,14 +47,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConectorBrokerWCF.cs" />
+    <Compile Include="HCSService.cs" />
     <Compile Include="HCS.WinService.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="HCS.WinService.Designer.cs">
       <DependentUpon>HCS.WinService.cs</DependentUpon>
     </Compile>
-    <Compile Include="Models\IConectorBrokerWCF.cs" />
+    <Compile Include="WCFContracts\IConectorBrokerWCF.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
