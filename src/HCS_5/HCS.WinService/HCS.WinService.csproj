@@ -64,5 +64,15 @@
   <ItemGroup>
     <Content Include="ManejoAlternativo con Delegados.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HCS.Connector.Abstractions\HCS.Connector.Abstractions.csproj">
+      <Project>{614E3098-150E-4A06-BC2C-08C74566B6F8}</Project>
+      <Name>HCS.Connector.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HCS.Connector.Dummy\HCS.Connector.Dummy.csproj">
+      <Project>{7E7E4A3D-1485-482A-943F-CAB1F27110A3}</Project>
+      <Name>HCS.Connector.Dummy</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

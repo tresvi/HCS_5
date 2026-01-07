@@ -18,43 +18,40 @@ namespace HCS.Connector.Dummy
 
         public bool CheckHealth()
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public void Close()
         {
-            throw new NotImplementedException();
         }
 
         public void Connect(ConnectorParameters parameters)
         {
-            throw new NotImplementedException();
         }
 
         public TimeSpan Ping(string param = "")
         {
-            throw new NotImplementedException();
+            return TimeSpan.Zero;
         }
 
         public void Recycle()
         {
-            throw new NotImplementedException();
         }
 
         public void Send(byte[] message, TimeSpan timeout, MessageMetadata metadata)
         {
-            if (!(metadata is MessageMetadataDummy mqMetadata))
-                throw new ArgumentException("Solo se acepta MessageMetadataMQ en ConnectorMQ.", nameof(metadata));
+            if (metadata != null && !(metadata is MessageMetadataDummy mqMetadata))
+                throw new ArgumentException($"Solo se acepta {nameof(MessageMetadataDummy)} como tipo válido.", nameof(metadata));
 
             throw new NotImplementedException();
         }
 
         public byte[] SendAndReceive(byte[] message, TimeSpan timeout, MessageMetadata metadata)
         {
-            if (!(metadata is MessageMetadataDummy mqMetadata))
-                throw new ArgumentException("Solo se acepta MessageMetadataMQ en ConnectorMQ.", nameof(metadata));
+            if (metadata != null && !(metadata is MessageMetadataDummy mqMetadata))
+                throw new ArgumentException($"Solo se acepta {nameof(MessageMetadataDummy)} como tipo válido.", nameof(metadata));
 
-            throw new NotImplementedException();
+            return message;
         }
 
         public Task<bool> CheckHealthAsync() => throw new NotImplementedException();
