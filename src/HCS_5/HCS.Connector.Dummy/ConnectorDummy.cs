@@ -2,6 +2,7 @@
 using HCS.Connector.Abstractions.Models;
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HCS.Connector.Dummy
@@ -40,12 +41,12 @@ namespace HCS.Connector.Dummy
         {
         }
 
-        public void Send(RequestMessage request, TimeSpan timeout)
+        public void Send(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
-        public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout)
+        public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             return new ResponseMessage();
         }
@@ -55,8 +56,8 @@ namespace HCS.Connector.Dummy
         public Task OpenAsync(IConnectorParameters parameters) => throw new NotImplementedException();
         public Task<TimeSpan> PingAsync(string param = "") => throw new NotImplementedException();
         public Task RecycleAsync() => throw new NotImplementedException();
-        public Task SendAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
-        public Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
+        public Task SendAsync(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken) => throw new NotImplementedException();
+        public Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken) => throw new NotImplementedException();
 
         public void Dispose()
         {
