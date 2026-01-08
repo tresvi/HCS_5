@@ -6,6 +6,6 @@ namespace HCS.Connector.IBMMQ
     public class ConectorParametersMQ : IConnectorParameters
     {
         public TimeSpan ConnectionTimeout { get; set; }
-        public int ConnectionRetry { get; set; }
+        public TimeSpan CloseTimeout { get; set; }
     }
 }
