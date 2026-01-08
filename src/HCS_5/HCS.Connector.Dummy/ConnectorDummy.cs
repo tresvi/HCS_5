@@ -1,6 +1,7 @@
 ﻿using HCS.Connector.Abstractions.Interfaces;
 using HCS.Connector.Abstractions.Models;
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace HCS.Connector.Dummy
@@ -39,20 +40,15 @@ namespace HCS.Connector.Dummy
         {
         }
 
-        public void Send(byte[] message, TimeSpan timeout, IMessageMetadata metadata)
+        public void Send(RequestMessage request, TimeSpan timeout)
         {
-            if (metadata != null && !(metadata is MessageMetadataDummy mqMetadata))
-                throw new ArgumentException($"Solo se acepta {nameof(MessageMetadataDummy)} como tipo válido.", nameof(metadata));
-
             throw new NotImplementedException();
         }
 
-        public byte[] SendAndReceive(byte[] message, TimeSpan timeout, IMessageMetadata metadata)
+        public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout)
         {
-            if (metadata != null && !(metadata is MessageMetadataDummy mqMetadata))
-                throw new ArgumentException($"Solo se acepta {nameof(MessageMetadataDummy)} como tipo válido.", nameof(metadata));
 
-            return message;
+            return new ResponseMessage();
         }
 
         public Task<bool> CheckHealthAsync() => throw new NotImplementedException();
@@ -60,7 +56,7 @@ namespace HCS.Connector.Dummy
         public Task OpenAsync(IConnectorParameters parameters) => throw new NotImplementedException();
         public Task<TimeSpan> PingAsync(string param = "") => throw new NotImplementedException();
         public Task RecycleAsync() => throw new NotImplementedException();
-        public Task SendAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata) => throw new NotImplementedException();
-        public Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata) => throw new NotImplementedException();
+        public Task SendAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
+        public Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
     }
 }

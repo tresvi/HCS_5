@@ -1,5 +1,6 @@
 ﻿using HCS.Connector.Abstractions.Models;
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace HCS.Connector.Abstractions.Interfaces
@@ -17,15 +18,15 @@ namespace HCS.Connector.Abstractions.Interfaces
         void Recycle();
         bool CheckHealth();
         TimeSpan Ping(string param = "");
-        void Send(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
-        byte[] SendAndReceive(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
+        void Send(RequestMessage request, TimeSpan timeout);
+        ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout);
 
         Task OpenAsync(IConnectorParameters parameters);
         Task CloseAsync();
         Task RecycleAsync();
         Task<bool> CheckHealthAsync();
         Task<TimeSpan> PingAsync(string param = "");
-        Task SendAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
-        Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
+        Task SendAsync(RequestMessage request, TimeSpan timeout);
+        Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout);
     }
 }

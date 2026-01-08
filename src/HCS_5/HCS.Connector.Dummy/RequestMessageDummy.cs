@@ -1,10 +1,11 @@
 ﻿using HCS.Connector.Abstractions.Interfaces;
+using HCS.Connector.Abstractions.Models;
 using System;
 using System.Collections.Generic;
 
 namespace HCS.Connector.Dummy
 {
-    internal class MessageMetadataDummy: IMessageMetadata
+    internal class RequestMessageDummy: RequestMessage
     {
         public string CorrelationID { get; set; }
         public string AppName { get; set; }
