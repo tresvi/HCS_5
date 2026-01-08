@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace HCS.Connector.Abstractions.Models
+namespace HCS.Connector.Abstractions.Interfaces
 {
-    public class ConnectorParameters
+    public interface IConnectorParameters
     {
         TimeSpan ConnectionTimeout { get; set; }
         int ConnectionRetry { get; set; }

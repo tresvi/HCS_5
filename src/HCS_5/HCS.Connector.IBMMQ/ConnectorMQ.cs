@@ -26,7 +26,7 @@ namespace HCS.Connector.IBMMQ
             throw new NotImplementedException();
         }
 
-        public void Connect(ConnectorParameters parameters)
+        public void Open(IConnectorParameters parameters)
         {
             throw new NotImplementedException();
         }
@@ -41,7 +41,7 @@ namespace HCS.Connector.IBMMQ
             throw new NotImplementedException();
         }
 
-        public void Send(byte[] message, TimeSpan timeout, MessageMetadata metadata)
+        public void Send(byte[] message, TimeSpan timeout, IMessageMetadata metadata)
         {
             if (!(metadata is MessageMetadataMQ mqMetadata))
                 throw new ArgumentException("Solo se acepta MessageMetadataMQ en ConnectorMQ.", nameof(metadata));
@@ -49,7 +49,7 @@ namespace HCS.Connector.IBMMQ
             throw new NotImplementedException();
         }
 
-        public byte[] SendAndReceive(byte[] message, TimeSpan timeout, MessageMetadata metadata)
+        public byte[] SendAndReceive(byte[] message, TimeSpan timeout, IMessageMetadata metadata)
         {
             if (!(metadata is MessageMetadataMQ mqMetadata))
                 throw new ArgumentException("Solo se acepta MessageMetadataMQ en ConnectorMQ.", nameof(metadata));
@@ -59,10 +59,10 @@ namespace HCS.Connector.IBMMQ
 
         public Task<bool> CheckHealthAsync() => throw new NotImplementedException();
         public Task CloseAsync() => throw new NotImplementedException();
-        public Task ConnectAsync(ConnectorParameters parameters) => throw new NotImplementedException();
+        public Task OpenAsync(IConnectorParameters parameters) => throw new NotImplementedException();
         public Task<TimeSpan> PingAsync(string param = "") => throw new NotImplementedException();
         public Task RecycleAsync() => throw new NotImplementedException();
-        public Task SendAsync(byte[] message, TimeSpan timeout, MessageMetadata metadata) => throw new NotImplementedException();
-        public Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, MessageMetadata metadata) => throw new NotImplementedException();
+        public Task SendAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata) => throw new NotImplementedException();
+        public Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata) => throw new NotImplementedException();
     }
 }

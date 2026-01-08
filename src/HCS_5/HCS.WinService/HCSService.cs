@@ -72,8 +72,8 @@ namespace HCS.WinService
                     //}
                     /*
                     IConnector connector = new ConnectorDummy();
-                    ConnectorParameters parameters = new ConnectorParameters() { };
-                    connector.Connect(parameters);
+                    IConnectorParameters parameters = new IConnectorParameters() { };
+                    connector.Open(parameters);
                     byte[] receivedBytes = connector.SendAndReceive(msgMensaje.Contenido, TimeSpan.FromSeconds(10), null);
                     respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
                     */

@@ -70,9 +70,12 @@
       <Name>HCS.Connector.Abstractions</Name>
     </ProjectReference>
     <ProjectReference Include="..\HCS.Connector.Dummy\HCS.Connector.Dummy.csproj">
-      <Project>{7E7E4A3D-1485-482A-943F-CAB1F27110A3}</Project>
+      <Project>{7e7e4a3d-1485-482a-943f-cab1f27110a3}</Project>
       <Name>HCS.Connector.Dummy</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

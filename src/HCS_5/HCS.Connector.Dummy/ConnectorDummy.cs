@@ -13,7 +13,7 @@ namespace HCS.Connector.Dummy
         public int MessagesSentCount { get; private set; }
         public int ErrorCount { get; private set; }
         public DateTime? ConnectedFrom { get; private set; }
-        public ConnectionStateEnum State { get; private set; }
+        public ConnectionStateEnum State { get; private set; } = ConnectionStateEnum.Created;
 
 
         public bool CheckHealth()
@@ -25,8 +25,9 @@ namespace HCS.Connector.Dummy
         {
         }
 
-        public void Connect(ConnectorParameters parameters)
+        public void Open(IConnectorParameters parameters)
         {
+            State = ConnectionStateEnum.Opened;
         }
 
         public TimeSpan Ping(string param = "")
@@ -38,7 +39,7 @@ namespace HCS.Connector.Dummy
         {
         }
 
-        public void Send(byte[] message, TimeSpan timeout, MessageMetadata metadata)
+        public void Send(byte[] message, TimeSpan timeout, IMessageMetadata metadata)
         {
             if (metadata != null && !(metadata is MessageMetadataDummy mqMetadata))
                 throw new ArgumentException($"Solo se acepta {nameof(MessageMetadataDummy)} como tipo válido.", nameof(metadata));
@@ -46,7 +47,7 @@ namespace HCS.Connector.Dummy
             throw new NotImplementedException();
         }
 
-        public byte[] SendAndReceive(byte[] message, TimeSpan timeout, MessageMetadata metadata)
+        public byte[] SendAndReceive(byte[] message, TimeSpan timeout, IMessageMetadata metadata)
         {
             if (metadata != null && !(metadata is MessageMetadataDummy mqMetadata))
                 throw new ArgumentException($"Solo se acepta {nameof(MessageMetadataDummy)} como tipo válido.", nameof(metadata));
@@ -56,10 +57,10 @@ namespace HCS.Connector.Dummy
 
         public Task<bool> CheckHealthAsync() => throw new NotImplementedException();
         public Task CloseAsync() => throw new NotImplementedException();
-        public Task ConnectAsync(ConnectorParameters parameters) => throw new NotImplementedException();
+        public Task OpenAsync(IConnectorParameters parameters) => throw new NotImplementedException();
         public Task<TimeSpan> PingAsync(string param = "") => throw new NotImplementedException();
         public Task RecycleAsync() => throw new NotImplementedException();
-        public Task SendAsync(byte[] message, TimeSpan timeout, MessageMetadata metadata) => throw new NotImplementedException();
-        public Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, MessageMetadata metadata) => throw new NotImplementedException();
+        public Task SendAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata) => throw new NotImplementedException();
+        public Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata) => throw new NotImplementedException();
     }
 }

@@ -12,20 +12,20 @@ namespace HCS.Connector.Abstractions.Interfaces
         DateTime? ConnectedFrom { get; }
         ConnectionStateEnum State { get; }
 
-        void Connect(ConnectorParameters parameters);
+        void Open(IConnectorParameters parameters);
         void Close();
         void Recycle();
         bool CheckHealth();
         TimeSpan Ping(string param = "");
-        void Send(byte[] message, TimeSpan timeout, MessageMetadata metadata);
-        byte[] SendAndReceive(byte[] message, TimeSpan timeout, MessageMetadata metadata);
+        void Send(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
+        byte[] SendAndReceive(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
 
-        Task ConnectAsync(ConnectorParameters parameters);
+        Task OpenAsync(IConnectorParameters parameters);
         Task CloseAsync();
         Task RecycleAsync();
         Task<bool> CheckHealthAsync();
         Task<TimeSpan> PingAsync(string param = "");
-        Task SendAsync(byte[] message, TimeSpan timeout, MessageMetadata metadata);
-        Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, MessageMetadata metadata);
+        Task SendAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
+        Task<byte[]> SendAndReceiveAsync(byte[] message, TimeSpan timeout, IMessageMetadata metadata);
     }
 }
