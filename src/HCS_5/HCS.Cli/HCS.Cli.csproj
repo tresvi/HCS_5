@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{577143D1-E05B-4DBD-8F0F-56877E501725}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
-    <RootNamespace>HCS.WinService</RootNamespace>
-    <AssemblyName>HCS.WinService</AssemblyName>
+    <ProjectGuid>{54C787EC-9445-49F4-943C-D0338761415D}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>HCS.Cli</RootNamespace>
+    <AssemblyName>HCS.Cli</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -22,7 +22,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,46 +35,19 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
-    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HCSService.cs" />
-    <Compile Include="HCS.WinService.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="HCS.WinService.Designer.cs">
-      <DependentUpon>HCS.WinService.cs</DependentUpon>
-    </Compile>
-    <Compile Include="WCFContracts\IConectorBrokerWCF.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="ManejoAlternativo con Delegados.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HCS.Connector.Abstractions\HCS.Connector.Abstractions.csproj">
-      <Project>{614E3098-150E-4A06-BC2C-08C74566B6F8}</Project>
-      <Name>HCS.Connector.Abstractions</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\HCS.Connector.Dummy\HCS.Connector.Dummy.csproj">
-      <Project>{7e7e4a3d-1485-482a-943f-cab1f27110a3}</Project>
-      <Name>HCS.Connector.Dummy</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

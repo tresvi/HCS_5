@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Linq;
 using System.ServiceModel;
 using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HCS.WinService
 {
@@ -36,7 +30,7 @@ namespace HCS.WinService
             int processId = Process.GetCurrentProcess().Id;
             Console.WriteLine($"PID del proceso: {processId}");
             
-            HCSServiceHost = new ServiceHost(typeof(ConectorBrokerWCF));
+            HCSServiceHost = new ServiceHost(typeof(HCSService));
         //    HCSServiceHost.Opened += new EventHandler(HCSServiceHost_Opened);
         //    HCSServiceHost.Closed += new EventHandler(HCSServiceHost_Closed);
         //    HCSServiceHost.Faulted += new EventHandler(HCSServiceHost_Error);

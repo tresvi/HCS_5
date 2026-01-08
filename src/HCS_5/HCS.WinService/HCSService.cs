@@ -1,4 +1,7 @@
 ﻿using BNA.FU.HCS;
+using HCS.Connector.Abstractions.Interfaces;
+using HCS.Connector.Abstractions.Models;
+using HCS.Connector.Dummy;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -15,7 +18,7 @@ namespace HCS.WinService
         ConcurrencyMode = ConcurrencyMode.Multiple,
         UseSynchronizationContext = false
     )]
-    public class ConectorBrokerWCF : IConectorBrokerWCF
+    public class HCSService : IConectorBrokerWCF
     {
         static int _openConnCounter = 0;
         static long _txsCounter = 0;
@@ -34,8 +37,8 @@ namespace HCS.WinService
                 Interlocked.Increment(ref _txsCounter);
                 if (_openConnCounter > _connCounterMax) Interlocked.Exchange(ref _connCounterMax, _openConnCounter);
 
-                //Thread.Sleep(10000);
                 string request = Encoding.ASCII.GetString(msgMensaje.Contenido);
+
                 //Console.WriteLine($"strDestino: {strDestino}");
                 //Console.WriteLine($"msgMensaje: {System.Text.Encoding.ASCII.GetString(msgMensaje.Contenido)}");
 
@@ -49,35 +52,37 @@ namespace HCS.WinService
                         respuesta = $"#Conexiones activas: {_openConnCounter}, #MsjesEnviados: {_txsCounter}, MaxConnCounter: {_connCounterMax}";
                     else
                         respuesta = UNKNOWN_COMMAND_RESPONSE;
+
                 }
                 else
                 { 
-                    respuesta = $"ECO de {msgMensaje}";
+                    //respuesta = $"ECO de {request}";
+
+                    //Thread.Sleep(10000);
+                    //   for (int i = 0; i < 20; i++)
+                    //   {
+                    //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
+                        if (channel.State == CommunicationState.Closed)
+                        {
+                            Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
+                            throw new Exception("Conexion cerrada por el cliente");
+                        }
+
+                    //    Thread.Sleep(1000);
+                    //}
+                    /*
+                    IConnector connector = new ConnectorDummy();
+                    IConnectorParameters parameters = new IConnectorParameters() { };
+                    connector.Open(parameters);
+                    byte[] receivedBytes = connector.SendAndReceive(msgMensaje.Contenido, TimeSpan.FromSeconds(10), null);
+                    respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
+                    */
                 }
-
-             //   for (int i = 0; i < 20; i++)
-             //   {
-              //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
-                    if (channel.State == CommunicationState.Closed)
-                    {
-                        Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
-                        throw new Exception("Conexion cerrada por el cliente"); 
-                    }
-
-                //    Thread.Sleep(1000);
-                //}
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
                 WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
                 responses.Add(msje1);
 
-                /*
-                IConector oCon = new ConectorBase();
-                BNA.FU.HCS.Mensaje oMsg = new BNA.FU.HCS.Mensaje();
-                oMsg.ID        = msgMensaje.ID;
-                oMsg.Contenido = msgMensaje.Contenido;
-                lmReturn = ConvertDataContract(oCon.EnviarRecibir(oMsg, strDestino));
-                */
             }
             catch (Exception e)
             {
