@@ -58,5 +58,10 @@ namespace HCS.Connector.IBMMQ
         public Task RecycleAsync() => throw new NotImplementedException();
         public Task SendAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
         public Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

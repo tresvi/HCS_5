@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace HCS.Connector.Abstractions.Interfaces
 {
-    public interface IConnector
+    public interface IConnector: IDisposable
     {
         string Name { get; }
         int MessagesSentCount { get; }

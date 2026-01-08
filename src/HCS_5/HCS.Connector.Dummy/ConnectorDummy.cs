@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HCS.Connector.Dummy
 {
-    public class ConnectorDummy : IConnector
+    public class ConnectorDummy : IConnector, IDisposable
     {
         private const string NAME = "Dummy";
 
@@ -47,7 +47,6 @@ namespace HCS.Connector.Dummy
 
         public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout)
         {
-
             return new ResponseMessage();
         }
 
@@ -58,5 +57,10 @@ namespace HCS.Connector.Dummy
         public Task RecycleAsync() => throw new NotImplementedException();
         public Task SendAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
         public Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout) => throw new NotImplementedException();
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

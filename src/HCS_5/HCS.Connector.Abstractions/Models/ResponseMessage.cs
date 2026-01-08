@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace HCS.Connector.Abstractions.Models
 {
@@ -8,17 +7,18 @@ namespace HCS.Connector.Abstractions.Models
     {
         public byte[] Content { get; set; }
         public string CorrelationID { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Timestamp de cuando se envió el mensaje
+        /// </summary>
+        public DateTime? ReceivedAt { get; private set; }
 
         /// <summary>
         /// Metadata adicional específico del conector (opcional)
         /// </summary>
-        public Dictionary<string, object> ExtendedMetadata { get; set; }
+        public Dictionary<string, object> ExtendedMetadata { get; set; } = new Dictionary<string, object>();
 
-        public ResponseMessage()
-        {
-            ExtendedMetadata = new Dictionary<string, object>();
-        }
+        public ResponseMessage() { }
 
         public ResponseMessage(byte[] content, string correlationID)
             : this()
