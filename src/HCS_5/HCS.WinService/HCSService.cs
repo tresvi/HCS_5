@@ -2,6 +2,7 @@
 using HCS.Connector.Abstractions.Interfaces;
 using HCS.Connector.Abstractions.Models;
 using HCS.Connector.Dummy;
+using HCS.Connector.IBMMQ;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -77,6 +78,14 @@ namespace HCS.WinService
                     byte[] receivedBytes = connector.SendAndReceive(msgMensaje.Contenido, TimeSpan.FromSeconds(10), null);
                     respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
                     */
+
+                    IConnector connector = new ConnectorMQ();
+                    IConnectorParameters parameters = new ConnectorParametersMQ() { Channel = "CHANNEL1", ManagerName ="MQGD", ServerIp = "192.168.0.31", ServerPort = 1414 };
+                    connector.Open(parameters);
+                    RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.XX1.RESPUESTA", OutputQueue = "BNA.XX1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
+                    requestMQ.Content = msgMensaje.Contenido;
+                    ResponseMessage response = connector.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
+                    respuesta += "ECO de " + Encoding.ASCII.GetString(response.Content);
                 }
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);

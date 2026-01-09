@@ -11,12 +11,12 @@ namespace HCS.Connector.Abstractions.Models
         /// <summary>
         /// Timestamp de cuando se envió el mensaje
         /// </summary>
-        public DateTime? ReceivedAt { get; private set; }
+        public DateTime? ReceivedAt { get; set; }
 
         /// <summary>
         /// Metadata adicional específico del conector (opcional)
         /// </summary>
-        public Dictionary<string, object> ExtendedMetadata { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
 
         public ResponseMessage() { }
 
