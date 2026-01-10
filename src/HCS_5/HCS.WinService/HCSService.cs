@@ -14,6 +14,7 @@ namespace HCS.WinService
 {
     //Esta configuración eleva el throughput notablemente, de 80K en 30seg a 116K
     //Resultado de test de carga con la consulta a "$PING$" en "??" con 1000 hilos en 30 seg.
+
     [ServiceBehavior(
         InstanceContextMode = InstanceContextMode.PerCall,
         ConcurrencyMode = ConcurrencyMode.Multiple,
@@ -21,6 +22,9 @@ namespace HCS.WinService
     )]
     public class HCSService : IConectorBrokerWCF
     {
+
+        private static IConnector _connectorMQ;
+
         static int _openConnCounter = 0;
         static long _txsCounter = 0;
         static long _connCounterMax = 0;
@@ -31,6 +35,14 @@ namespace HCS.WinService
         {
             BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
             IContextChannel channel = OperationContext.Current?.Channel;
+
+
+            if (_connectorMQ == null)
+            {
+                _connectorMQ = new ConnectorMQ();
+                IConnectorParameters parameters = new ConnectorParametersMQ() { Channel = "CHANNEL1", ManagerName = "MQGD", ServerIp = "10.6.248.10", ServerPort = 1414 };
+                _connectorMQ.Open(parameters);
+            }
 
             try
             {
@@ -79,13 +91,20 @@ namespace HCS.WinService
                     respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
                     */
 
-                    IConnector connector = new ConnectorMQ();
-                    IConnectorParameters parameters = new ConnectorParametersMQ() { Channel = "CHANNEL1", ManagerName ="MQGD", ServerIp = "192.168.0.31", ServerPort = 1414 };
-                    connector.Open(parameters);
-                    RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.XX1.RESPUESTA", OutputQueue = "BNA.XX1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
+
+                    RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.CU1.RESPUESTA", OutputQueue = "BNA.CU1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
                     requestMQ.Content = msgMensaje.Contenido;
-                    ResponseMessage response = connector.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
-                    respuesta += "ECO de " + Encoding.ASCII.GetString(response.Content);
+                    
+                    // Medir tiempo de SendAndReceive
+                    var sendAndReceiveStopwatch = Stopwatch.StartNew();
+                    ResponseMessage response = _connectorMQ.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
+                    sendAndReceiveStopwatch.Stop();
+                    
+                    Debug.WriteLine($"[HCSService.EnviarRecibir] Tiempo SendAndReceive - CorrelationID: {requestMQ.CorrelationID}");
+                    Debug.WriteLine($"  Total SendAndReceive: {sendAndReceiveStopwatch.ElapsedMilliseconds} ms");
+                    //_connectorMQ.Send(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
+                    //response.Content = new byte[] { 97, 98, 99, 0 };
+                    respuesta += "ECO de " + Encoding.ASCII.GetString(requestMQ.Content);
                 }
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);

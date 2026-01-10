@@ -223,6 +223,16 @@ namespace HCS.Connector.IBMMQ
 
         public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
         {
+            // Inicializar mediciones de tiempo
+            var totalStopwatch = Stopwatch.StartNew();
+            var openQueuesStopwatch = new Stopwatch();
+            var preparePutStopwatch = new Stopwatch();
+            var putStopwatch = new Stopwatch();
+            var prepareGetStopwatch = new Stopwatch();
+            var getStopwatch = new Stopwatch();
+            var processResponseStopwatch = new Stopwatch();
+            var closeQueuesStopwatch = new Stopwatch();
+
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
@@ -234,6 +244,7 @@ namespace HCS.Connector.IBMMQ
 
             MQQueue queueOut = null;
             MQQueue queueIn = null;
+            ResponseMessage response = null;
             
             try
             {
@@ -242,14 +253,17 @@ namespace HCS.Connector.IBMMQ
                 if (string.IsNullOrEmpty(mqRequest.InputQueue))
                     throw new ArgumentException("InputQueue must be specified", nameof(request));
 
-                // Abrir colas
+                // Medir tiempo de apertura de colas
+                openQueuesStopwatch.Start();
                 int openOutOptions = MQC.MQOO_OUTPUT | MQC.MQOO_FAIL_IF_QUIESCING;
                 int openInOptions = MQC.MQOO_INPUT_AS_Q_DEF | MQC.MQOO_FAIL_IF_QUIESCING;
 
                 queueOut = _queueManager.AccessQueue(mqRequest.OutputQueue, openOutOptions);
                 queueIn = _queueManager.AccessQueue(mqRequest.InputQueue, openInOptions);
+                openQueuesStopwatch.Stop();
 
-                // Preparar mensaje para PUT
+                // Medir tiempo de preparación del mensaje PUT
+                preparePutStopwatch.Start();
                 var msgPut = new MQMessage
                 {
                     Format = MQC.MQFMT_STRING,
@@ -266,8 +280,13 @@ namespace HCS.Connector.IBMMQ
                 {
                     Options = MQC.MQPMO_NO_SYNCPOINT | MQC.MQPMO_NEW_MSG_ID //| MQC.MQPMO_NO_CONTEXT
                 };
+                preparePutStopwatch.Stop();
 
+                // Medir tiempo de PUT
+                putStopwatch.Start();
                 queueOut.Put(msgPut, pmo);
+                putStopwatch.Stop();
+                
                 request.SentAt = DateTime.UtcNow;
                 Interlocked.Increment(ref _messagesSentCount);
 
@@ -275,7 +294,8 @@ namespace HCS.Connector.IBMMQ
                 byte[] correlationId = new byte[24];
                 Array.Copy(msgPut.MessageId, correlationId, 24);
 
-                // Preparar mensaje para GET
+                // Medir tiempo de preparación del mensaje GET
+                prepareGetStopwatch.Start();
                 var msgGet = new MQMessage
                 {
                     CharacterSet = 1208,  // UTF-8
@@ -292,15 +312,23 @@ namespace HCS.Connector.IBMMQ
                 var gmo = new MQGetMessageOptions
                 {
                     Options = MQC.MQGMO_WAIT | MQC.MQGMO_CONVERT | MQC.MQGMO_NO_SYNCPOINT | MQC.MQGMO_FAIL_IF_QUIESCING,
-                    WaitInterval = 3500,//waitInterval,
+                    WaitInterval = 6500,//waitInterval,
                   //  MatchOptions = MQC.MQMO_MATCH_CORREL_ID
                 };
+                prepareGetStopwatch.Stop();
 
+                // Medir tiempo de GET
+                getStopwatch.Start();
                 queueIn.Get(msgGet, gmo);
+                getStopwatch.Stop();
+
+                // Medir tiempo de procesamiento de respuesta
+                processResponseStopwatch.Start();
                 string responseContent = msgGet.ReadString(msgGet.MessageLength);
                 byte[] responseBytes = Encoding.UTF8.GetBytes(responseContent);
+                processResponseStopwatch.Stop();
 
-                var response = new ResponseMessage(responseBytes, request.CorrelationID);
+                response = new ResponseMessage(responseBytes, request.CorrelationID);
                 response.ReceivedAt = DateTime.UtcNow;
 
                 // Agrego metadata adicional
@@ -311,6 +339,7 @@ namespace HCS.Connector.IBMMQ
                 }
 
                 Interlocked.Increment(ref _messagesSentCount);
+                
                 return response;
             }
             catch (MQException mqEx) when (mqEx.ReasonCode == MQC.MQRC_NO_MSG_AVAILABLE)
@@ -330,9 +359,32 @@ namespace HCS.Connector.IBMMQ
             }
             finally
             {
+                // Medir tiempo de cierre de colas
+                closeQueuesStopwatch.Start();
                 queueOut?.Close();
                 queueIn?.Close();
+                closeQueuesStopwatch.Stop();
+                
+                // Detener el cronómetro total
+                totalStopwatch.Stop();
+                
+                // Imprimir todas las mediciones
+                Debug.WriteLine($"[ConnectorMQ.SendAndReceive] Mediciones de tiempo - CorrelationID: {request?.CorrelationID ?? "N/A"}");
+                Debug.WriteLine($"  Total: {totalStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  Apertura de colas (AccessQueue): {openQueuesStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  Preparación mensaje PUT: {preparePutStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  PUT (queueOut.Put): {putStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  Preparación mensaje GET: {prepareGetStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  GET (queueIn.Get): {getStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  Procesamiento respuesta: {processResponseStopwatch.ElapsedMilliseconds} ms");
+                Debug.WriteLine($"  Cierre de colas (Close): {closeQueuesStopwatch.ElapsedMilliseconds} ms");
+                
+                if (mqRequest != null)
+                {
+                    Debug.WriteLine($"  OutputQueue: {mqRequest.OutputQueue}, InputQueue: {mqRequest.InputQueue}");
+                }
             }
+                
         }
 
         // Métodos Async
