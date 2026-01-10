@@ -221,6 +221,9 @@ namespace HCS.Connector.IBMMQ
             }
         }
 
+        MQQueue _queueOut = null;
+        MQQueue _queueIn = null;
+
         public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             if (request == null)
@@ -232,8 +235,6 @@ namespace HCS.Connector.IBMMQ
             if (State != ConnectionStateEnum.Opened)
                 throw new InvalidOperationException("Connector is not open");
 
-            MQQueue queueOut = null;
-            MQQueue queueIn = null;
             ResponseMessage response = null;
             
             try
@@ -247,8 +248,11 @@ namespace HCS.Connector.IBMMQ
                 int openOutOptions = MQC.MQOO_OUTPUT | MQC.MQOO_FAIL_IF_QUIESCING;
                 int openInOptions = MQC.MQOO_INPUT_AS_Q_DEF | MQC.MQOO_FAIL_IF_QUIESCING;
 
-                queueOut = _queueManager.AccessQueue(mqRequest.OutputQueue, openOutOptions);
-                queueIn = _queueManager.AccessQueue(mqRequest.InputQueue, openInOptions);
+                if (_queueIn == null || _queueOut == null)
+                {
+                    _queueOut = _queueManager.AccessQueue(mqRequest.OutputQueue, openOutOptions);
+                    _queueIn = _queueManager.AccessQueue(mqRequest.InputQueue, openInOptions);
+                }
 
                 // Preparar mensaje PUT
                 var msgPut = new MQMessage
@@ -269,7 +273,7 @@ namespace HCS.Connector.IBMMQ
                 };
 
                 // PUT
-                queueOut.Put(msgPut, pmo);
+                _queueOut.Put(msgPut, pmo);
                 
                 request.SentAt = DateTime.UtcNow;
                 Interlocked.Increment(ref _messagesSentCount);
@@ -300,7 +304,7 @@ namespace HCS.Connector.IBMMQ
                 };
 
                 // GET
-                queueIn.Get(msgGet, gmo);
+                _queueIn.Get(msgGet, gmo);
 
                 // Procesar respuesta
                 string responseContent = msgGet.ReadString(msgGet.MessageLength);
@@ -337,8 +341,8 @@ namespace HCS.Connector.IBMMQ
             }
             finally
             {
-                queueOut?.Close();
-                queueIn?.Close();
+               // _queueOut?.Close();
+               // _queueIn?.Close();
             }
                 
         }

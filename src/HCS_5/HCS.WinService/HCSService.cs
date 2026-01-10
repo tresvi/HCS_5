@@ -28,6 +28,8 @@ namespace HCS.WinService
         static int _openConnCounter = 0;
         static long _txsCounter = 0;
         static long _connCounterMax = 0;
+        static long _canceledByClientConnCounter = 0;
+        private static readonly object _connectorLock = new object();
         static readonly string _respuetaPing = $"ok - {Environment.MachineName}";
         const string UNKNOWN_COMMAND_RESPONSE = "Comando no reconocido";
 
@@ -36,13 +38,7 @@ namespace HCS.WinService
             BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
             IContextChannel channel = OperationContext.Current?.Channel;
 
-
-            if (_connectorMQ == null)
-            {
-                _connectorMQ = new ConnectorMQ();
-                IConnectorParameters parameters = new ConnectorParametersMQ() { Channel = "CHANNEL1", ManagerName = "MQGD", ServerIp = "10.6.248.10", ServerPort = 1414 };
-                _connectorMQ.Open(parameters);
-            }
+            VerifyConnector();
 
             try
             {
@@ -62,27 +58,14 @@ namespace HCS.WinService
                     if (request.Trim() == "$PING$")
                         respuesta = _respuetaPing;
                     else if (request.Trim() == "$STATUS$")
-                        respuesta = $"#Conexiones activas: {_openConnCounter}, #MsjesEnviados: {_txsCounter}, MaxConnCounter: {_connCounterMax}";
+                        respuesta = $"#Conexiones activas: {_openConnCounter}, #MsjesEnviados: {_txsCounter}, MaxConnCounter: {_connCounterMax}, Canceled by Client: {_canceledByClientConnCounter}";
                     else
                         respuesta = UNKNOWN_COMMAND_RESPONSE;
-
                 }
                 else
                 { 
                     //respuesta = $"ECO de {request}";
-
-                    //Thread.Sleep(10000);
-                    //   for (int i = 0; i < 20; i++)
-                    //   {
-                    //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
-                        if (channel.State == CommunicationState.Closed)
-                        {
-                            Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
-                            throw new Exception("Conexion cerrada por el cliente");
-                        }
-
-                    //    Thread.Sleep(1000);
-                    //}
+                    
                     /*
                     IConnector connector = new ConnectorDummy();
                     IConnectorParameters parameters = new IConnectorParameters() { };
@@ -91,14 +74,31 @@ namespace HCS.WinService
                     respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
                     */
 
-
                     RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.CU1.RESPUESTA", OutputQueue = "BNA.CU1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
                     requestMQ.Content = msgMensaje.Contenido;
-                    
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
                     ResponseMessage response = _connectorMQ.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
+                    sw.Stop();
+                    Debug.WriteLine($"S&R:{sw.ElapsedMilliseconds}");
                     //_connectorMQ.Send(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
                     //response.Content = new byte[] { 97, 98, 99, 0 };
                     respuesta += "ECO de " + Encoding.ASCII.GetString(requestMQ.Content);
+
+                    //Thread.Sleep(10000);
+                    //   for (int i = 0; i < 20; i++)
+                    //   {
+                    //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
+                    if (channel.State == CommunicationState.Closed)
+                    {
+                        Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
+                        //throw new Exception("Conexion cerrada por el cliente");
+                        Interlocked.Increment(ref _canceledByClientConnCounter);
+                        return null;
+                    }
+
+                    //    Thread.Sleep(1000);
+                    //}
                 }
 
                 byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
@@ -128,6 +128,33 @@ namespace HCS.WinService
                 cts.Cancel();
             }
             catch { }
+        }
+
+        IConnector VerifyConnector()
+        { 
+            lock (_connectorLock)
+            {
+                if (_connectorMQ != null && _connectorMQ.State == ConnectionStateEnum.Opened)
+                    return _connectorMQ;
+
+                if (_connectorMQ != null)
+                {
+                    try { _connectorMQ.Close(); } catch { }
+                    _connectorMQ = null;
+                }
+                
+                _connectorMQ = new ConnectorMQ();
+                IConnectorParameters parameters = new ConnectorParametersMQ()
+                {
+                    Channel = "CHANNEL1",
+                    ManagerName = "MQGD",
+                    ServerIp = "10.6.248.10",
+                    ServerPort = 1414
+                };
+                
+                _connectorMQ.Open(parameters);
+                return _connectorMQ;
+            }
         }
 
     }
