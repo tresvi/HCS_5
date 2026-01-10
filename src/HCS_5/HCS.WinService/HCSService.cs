@@ -95,13 +95,7 @@ namespace HCS.WinService
                     RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.CU1.RESPUESTA", OutputQueue = "BNA.CU1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
                     requestMQ.Content = msgMensaje.Contenido;
                     
-                    // Medir tiempo de SendAndReceive
-                    var sendAndReceiveStopwatch = Stopwatch.StartNew();
                     ResponseMessage response = _connectorMQ.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
-                    sendAndReceiveStopwatch.Stop();
-                    
-                    Debug.WriteLine($"[HCSService.EnviarRecibir] Tiempo SendAndReceive - CorrelationID: {requestMQ.CorrelationID}");
-                    Debug.WriteLine($"  Total SendAndReceive: {sendAndReceiveStopwatch.ElapsedMilliseconds} ms");
                     //_connectorMQ.Send(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
                     //response.Content = new byte[] { 97, 98, 99, 0 };
                     respuesta += "ECO de " + Encoding.ASCII.GetString(requestMQ.Content);
