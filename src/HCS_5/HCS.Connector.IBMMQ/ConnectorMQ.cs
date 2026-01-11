@@ -14,12 +14,17 @@ namespace HCS.Connector.IBMMQ
     public class ConnectorMQ : IConnector, IDisposable
     {
         private const string NAME = "MQCore";
-        private int _messagesSentCount;
-        private int _errorCount;
+        private long _totalSentMessages;
+        private long _totalReceivedMessages;
+        private long _totalSentMessageErrors;
+        private long _totalReceivedMessageErrors;
 
         public string Name { get { return NAME; } }
-        public int MessagesSentCount => _messagesSentCount;
-        public int ErrorCount => _errorCount;
+        public long TotalSentMessages => _totalSentMessages;
+        public long TotalReceivedMessages => _totalReceivedMessages;
+        public long TotalSentMessageErrors => _totalSentMessageErrors;
+        public long TotalReceivedMessageErrors => _totalReceivedMessageErrors;
+
         public DateTime? ConnectedFrom { get; private set; }
         public ConnectionStateEnum State { get; private set; } = ConnectionStateEnum.Created;
 
@@ -62,13 +67,11 @@ namespace HCS.Connector.IBMMQ
                 }
                 catch (MQException mqEx)
                 {
-                    Interlocked.Increment(ref _errorCount);
                     State = ConnectionStateEnum.Faulted;
                     throw new Exception($"Error al conectar con IBM MQ: Reason={mqEx.ReasonCode}, Message={mqEx.Message}", mqEx);
                 }
                 catch (Exception ex)
                 {
-                    Interlocked.Increment(ref _errorCount);
                     State = ConnectionStateEnum.Faulted;
                     throw;
                 }
@@ -96,7 +99,6 @@ namespace HCS.Connector.IBMMQ
                 }
                 catch (Exception ex)
                 {
-                    Interlocked.Increment(ref _errorCount);
                     State = ConnectionStateEnum.Faulted;
                     throw;
                 }
@@ -144,7 +146,6 @@ namespace HCS.Connector.IBMMQ
             catch
             {
                 stopwatch.Stop();
-                Interlocked.Increment(ref _errorCount);
                 throw;
             }
         }
@@ -161,97 +162,35 @@ namespace HCS.Connector.IBMMQ
             }
         }
 
+
         public void Send(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
-
             if (!(request is RequestMessageMQ mqRequest))
                 throw new ArgumentException("Request must be of type RequestMessageMQ", nameof(request));
 
-            if (State != ConnectionStateEnum.Opened)
-                throw new InvalidOperationException("Connector is not open");
-
-            MQQueue outputQueue = null;
-            try
-            {
-                if (string.IsNullOrEmpty(mqRequest.OutputQueue))
-                    throw new ArgumentException("OutputQueue must be specified", nameof(request));
-
-                // Abrir cola de salida
-                int openOptions = MQC.MQOO_OUTPUT | MQC.MQOO_FAIL_IF_QUIESCING;
-                outputQueue = _queueManager.AccessQueue(mqRequest.OutputQueue, openOptions);
-
-                // Crear mensaje MQ
-                var msg = new MQMessage
-                {
-                    Format = MQC.MQFMT_STRING,
-                    CharacterSet = 1208,  // UTF-8
-                    MessageId = MQC.MQMI_NONE,
-                    CorrelationId = MQC.MQCI_NONE,
-                    Persistence = MQC.MQPER_NOT_PERSISTENT
-                };
-
-                string content = Encoding.UTF8.GetString(request.Content);
-                msg.WriteString(content);
-
-                var pmo = new MQPutMessageOptions
-                {
-                    Options = MQC.MQPMO_NO_SYNCPOINT | MQC.MQPMO_NEW_MSG_ID | MQC.MQPMO_NO_CONTEXT
-                };
-                
-                outputQueue.Put(msg, pmo);
-
-                request.SentAt = DateTime.UtcNow;
-                Interlocked.Increment(ref _messagesSentCount);
-            }
-            catch (MQException mqEx)
-            {
-                Interlocked.Increment(ref _errorCount);
-                throw new Exception($"Error MQ al enviar mensaje: Reason={mqEx.ReasonCode}, Message={mqEx.Message}", mqEx);
-            }
-            catch (Exception ex)
-            {
-                Interlocked.Increment(ref _errorCount);
-                throw;
-            }
-            finally
-            {
-                outputQueue?.Close();
-            }
+            (byte[] correlationId, _) = Send(mqRequest);
+            //TODO: Deberia inyecar el Correlation ID ? Probablemente si
         }
+
 
         MQQueue _queueOut = null;
         MQQueue _queueIn = null;
 
-        public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
+        /// <summary>
+        /// Envía un mensaje a la cola de salida y retorna el CorrelationId para recibir la respuesta
+        /// </summary>
+        private (byte[] correlationId, DateTime putDateTime) Send(RequestMessageMQ mqRequest)
         {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
+            if (string.IsNullOrEmpty(mqRequest.OutputQueue))
+                throw new ArgumentException("OutputQueue must be specified", nameof(mqRequest));
 
-            if (!(request is RequestMessageMQ mqRequest))
-                throw new ArgumentException("Request must be of type RequestMessageMQ", nameof(request));
-
-            if (State != ConnectionStateEnum.Opened)
-                throw new InvalidOperationException("Connector is not open");
-
-            ResponseMessage response = null;
-            
             try
             {
-                if (string.IsNullOrEmpty(mqRequest.OutputQueue))
-                    throw new ArgumentException("OutputQueue must be specified", nameof(request));
-                if (string.IsNullOrEmpty(mqRequest.InputQueue))
-                    throw new ArgumentException("InputQueue must be specified", nameof(request));
-
-                // Abrir colas
-                int openOutOptions = MQC.MQOO_OUTPUT | MQC.MQOO_FAIL_IF_QUIESCING;
-                int openInOptions = MQC.MQOO_INPUT_AS_Q_DEF | MQC.MQOO_FAIL_IF_QUIESCING;
-
-                if (_queueIn == null || _queueOut == null)
+                // Abrir cola de salida si es necesario
+                if (_queueOut == null)
                 {
+                    int openOutOptions = MQC.MQOO_OUTPUT | MQC.MQOO_FAIL_IF_QUIESCING;
                     _queueOut = _queueManager.AccessQueue(mqRequest.OutputQueue, openOutOptions);
-                    _queueIn = _queueManager.AccessQueue(mqRequest.InputQueue, openInOptions);
                 }
 
                 // Preparar mensaje PUT
@@ -264,7 +203,7 @@ namespace HCS.Connector.IBMMQ
                     Persistence = MQC.MQPER_NOT_PERSISTENT
                 };
 
-                string content = Encoding.UTF8.GetString(request.Content);
+                string content = Encoding.UTF8.GetString(mqRequest.Content);
                 msgPut.WriteString(content);
 
                 var pmo = new MQPutMessageOptions
@@ -272,15 +211,45 @@ namespace HCS.Connector.IBMMQ
                     Options = MQC.MQPMO_NO_SYNCPOINT | MQC.MQPMO_NEW_MSG_ID //| MQC.MQPMO_NO_CONTEXT
                 };
 
-                // PUT
                 _queueOut.Put(msgPut, pmo);
-                
-                request.SentAt = DateTime.UtcNow;
-                Interlocked.Increment(ref _messagesSentCount);
+
+                mqRequest.SentAt = DateTime.UtcNow;
+                Interlocked.Increment(ref _totalSentMessages);
 
                 // Obtener CorrelationId del mensaje enviado (lo usa MQ para el match)
                 byte[] correlationId = new byte[24];
                 Array.Copy(msgPut.MessageId, correlationId, 24);
+
+                return (correlationId, msgPut.PutDateTime);
+            }
+            catch (MQException mqEx)
+            {
+                Interlocked.Increment(ref _totalSentMessageErrors);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Increment(ref _totalSentMessageErrors);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Recibe un mensaje de la cola de entrada usando el CorrelationId y retorna la respuesta
+        /// </summary>
+        private (ResponseMessage response, DateTime putDateTime) Receive(RequestMessageMQ mqRequest, byte[] correlationId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(mqRequest.InputQueue))
+                throw new ArgumentException("InputQueue must be specified", nameof(mqRequest));
+
+            try
+            {
+                // Abrir cola de entrada si es necesario
+                if (_queueIn == null)
+                {
+                    int openInOptions = MQC.MQOO_INPUT_AS_Q_DEF | MQC.MQOO_FAIL_IF_QUIESCING;
+                    _queueIn = _queueManager.AccessQueue(mqRequest.InputQueue, openInOptions);
+                }
 
                 // Preparar mensaje GET
                 var msgGet = new MQMessage
@@ -299,8 +268,8 @@ namespace HCS.Connector.IBMMQ
                 var gmo = new MQGetMessageOptions
                 {
                     Options = MQC.MQGMO_WAIT | MQC.MQGMO_CONVERT | MQC.MQGMO_NO_SYNCPOINT | MQC.MQGMO_FAIL_IF_QUIESCING,
-                    WaitInterval = 6500,//waitInterval,
-                  //  MatchOptions = MQC.MQMO_MATCH_CORREL_ID
+                    WaitInterval = 6500, //waitInterval,
+                    MatchOptions = MQC.MQMO_MATCH_CORREL_ID
                 };
 
                 // GET
@@ -310,7 +279,7 @@ namespace HCS.Connector.IBMMQ
                 string responseContent = msgGet.ReadString(msgGet.MessageLength);
                 byte[] responseBytes = Encoding.UTF8.GetBytes(responseContent);
 
-                response = new ResponseMessage(responseBytes, request.CorrelationID);
+                var response = new ResponseMessage(responseBytes, mqRequest.CorrelationID);
                 response.ReceivedAt = DateTime.UtcNow;
 
                 // Agrego metadata adicional
@@ -320,31 +289,66 @@ namespace HCS.Connector.IBMMQ
                     response.Metadata["PutDateTime"] = msgGet.PutDateTime;
                 }
 
-                Interlocked.Increment(ref _messagesSentCount);
-                
+                Interlocked.Increment(ref _totalReceivedMessages);
+
+                return (response, msgGet.PutDateTime);
+            }
+            catch (MQException mqEx)
+            {
+                Interlocked.Increment(ref _totalReceivedMessageErrors);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Increment(ref _totalReceivedMessageErrors);
+                throw;
+            }
+        }
+
+
+        public ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            if (!(request is RequestMessageMQ mqRequest))
+                throw new ArgumentException("Request must be of type RequestMessageMQ", nameof(request));
+
+            if (State != ConnectionStateEnum.Opened)
+                throw new InvalidOperationException("Connector is not open");
+
+            try
+            {
+                DateTime firstPutDateTime, LastPutDateTime;
+                byte[] correlationId;
+                ResponseMessage response;
+
+                // Enviar mensaje y obtener CorrelationId
+                (correlationId, firstPutDateTime) = Send(mqRequest);
+
+                // Recibir respuesta usando el CorrelationId
+                (response, LastPutDateTime) = Receive(mqRequest, correlationId, timeout, cancellationToken);
+
                 return response;
             }
             catch (MQException mqEx) when (mqEx.ReasonCode == MQC.MQRC_NO_MSG_AVAILABLE)
             {
-                Interlocked.Increment(ref _errorCount);
+                // Timeout en Receive - ya contado en Receive() como _totalReceivedMessageErrors
                 throw new TimeoutException($"No se recibió respuesta en el timeout especificado: {timeout}", mqEx);
             }
             catch (MQException mqEx)
             {
-                Interlocked.Increment(ref _errorCount);
                 throw new Exception($"Error MQ en SendAndReceive: Reason={mqEx.ReasonCode}, Message={mqEx.Message}", mqEx);
             }
             catch (Exception ex)
             {
-                Interlocked.Increment(ref _errorCount);
                 throw;
             }
             finally
             {
-               // _queueOut?.Close();
-               // _queueIn?.Close();
+                // _queueOut?.Close();
+                // _queueIn?.Close();
             }
-                
         }
 
         // Métodos Async
