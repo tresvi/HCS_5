@@ -4,6 +4,7 @@ using HCS.Connector.Abstractions.Models;
 using HCS.Connector.Dummy;
 using HCS.Connector.IBMMQ;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.ServiceModel;
@@ -33,12 +34,21 @@ namespace HCS.WinService
         static readonly string _respuetaPing = $"ok - {Environment.MachineName}";
         const string UNKNOWN_COMMAND_RESPONSE = "Comando no reconocido";
 
+
         public BindingList<WCFMensaje> EnviarRecibir(WCFMensaje msgMensaje, string strDestino)
         {
+            Stopwatch swTotal = new Stopwatch();
+            Stopwatch swConvert = new Stopwatch();
+            Stopwatch swVerify = new Stopwatch();
+            Stopwatch swSendAndReceive = new Stopwatch();
+            
+            swTotal.Start();
             BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
             IContextChannel channel = OperationContext.Current?.Channel;
 
+            swVerify.Start();
             VerifyConnector();
+            swVerify.Stop();
 
             try
             {
@@ -61,50 +71,54 @@ namespace HCS.WinService
                         respuesta = $"#Conexiones activas: {_openConnCounter}, #MsjesEnviados: {_txsCounter}, MaxConnCounter: {_connCounterMax}, Canceled by Client: {_canceledByClientConnCounter}";
                     else
                         respuesta = UNKNOWN_COMMAND_RESPONSE;
-                }
-                else
-                { 
-                    //respuesta = $"ECO de {request}";
-                    
-                    /*
-                    IConnector connector = new ConnectorDummy();
-                    IConnectorParameters parameters = new IConnectorParameters() { };
-                    connector.Open(parameters);
-                    byte[] receivedBytes = connector.SendAndReceive(msgMensaje.Contenido, TimeSpan.FromSeconds(10), null);
-                    respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
-                    */
 
-                    RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.CU1.RESPUESTA", OutputQueue = "BNA.CU1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
-                    requestMQ.Content = msgMensaje.Contenido;
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-                    ResponseMessage response = _connectorMQ.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
-                    sw.Stop();
-                    Debug.WriteLine($"S&R:{sw.ElapsedMilliseconds}");
-                    //_connectorMQ.Send(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
-                    //response.Content = new byte[] { 97, 98, 99, 0 };
-                    respuesta += "ECO de " + Encoding.ASCII.GetString(requestMQ.Content);
-
-                    //Thread.Sleep(10000);
-                    //   for (int i = 0; i < 20; i++)
-                    //   {
-                    //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
-                    if (channel.State == CommunicationState.Closed)
-                    {
-                        Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
-                        //throw new Exception("Conexion cerrada por el cliente");
-                        Interlocked.Increment(ref _canceledByClientConnCounter);
-                        return null;
-                    }
-
-                    //    Thread.Sleep(1000);
-                    //}
+                    byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
+                    WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
+                    responses.Add(msje1);
+                    return responses;
                 }
 
-                byte[] respuestaBytes = Encoding.UTF8.GetBytes(respuesta);
-                WCFMensaje msje1 = new WCFMensaje() { ID = msgMensaje.ID, Contenido = respuestaBytes };
-                responses.Add(msje1);
+                //respuesta = $"ECO de {request}";
 
+                /*
+                IConnector connector = new ConnectorDummy();
+                IConnectorParameters parameters = new IConnectorParameters() { };
+                connector.Open(parameters);
+                byte[] receivedBytes = connector.SendAndReceive(msgMensaje.Contenido, TimeSpan.FromSeconds(10), null);
+                respuesta += "ECO de " + Encoding.ASCII.GetString(receivedBytes);
+                */
+
+                //RequestMessageMQ requestMQ  = new RequestMessageMQ() { InputQueue = "BNA.CU1.RESPUESTA", OutputQueue = "BNA.CU1.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
+                RequestMessageMQ requestMQ = new RequestMessageMQ() { InputQueue = "BNA.TU5.RESPUESTA", OutputQueue = "BNA.TU5.PEDIDO", SendTimeout = TimeSpan.FromSeconds(2) };
+                requestMQ.Content = msgMensaje.Contenido;
+
+                swSendAndReceive.Start();
+                ResponseMessage response = _connectorMQ.SendAndReceive(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
+                swSendAndReceive.Stop();
+
+                //_connectorMQ.Send(requestMQ, TimeSpan.FromSeconds(10), new CancellationToken());
+                //response.Content = new byte[] { 97, 98, 99, 0 };
+
+                //Thread.Sleep(10000);
+                //   for (int i = 0; i < 20; i++)
+                //   {
+                //      Debug.WriteLine($"Channel State: {channel.State.ToString()}");
+                if (channel.State == CommunicationState.Closed)
+                {
+                    Console.WriteLine("FINALIZOOOOOOOOO DE GOLPE");
+                    //throw new Exception("Conexion cerrada por el cliente");
+                    Interlocked.Increment(ref _canceledByClientConnCounter);
+                    return null;
+                }
+
+                swConvert.Start();
+                BindingList<WCFMensaje> wcfResponse = ConvertResponseToWCFMessage(in response, msgMensaje.ID);
+                swConvert.Stop();
+
+                return wcfResponse;
+
+                //    Thread.Sleep(1000);
+                //}
             }
             catch (Exception e)
             {
@@ -115,9 +129,9 @@ namespace HCS.WinService
             {
                 //No hay forma de que no pase por aca
                 Interlocked.Decrement(ref _openConnCounter);
+                swTotal.Stop();
+                Debug.WriteLine($"Total: {swTotal.ElapsedMilliseconds} = Verify:{swVerify.ElapsedMilliseconds}  +  S&R: {swSendAndReceive.ElapsedMilliseconds} + Conv: {swConvert.ElapsedMilliseconds} ");
             }
-
-            return responses;
         }
 
         void Cancel(CancellationTokenSource cts)
@@ -129,6 +143,27 @@ namespace HCS.WinService
             }
             catch { }
         }
+
+
+        private BindingList<WCFMensaje> ConvertResponseToWCFMessage(in ResponseMessage response, string correlationID)
+        {
+            if (response?.Content == null) return null;
+
+            BindingList<WCFMensaje> responses = new BindingList<WCFMensaje>();
+
+            foreach (byte[] contentBytes in response.Content)
+            {
+                WCFMensaje wcfMessage = new WCFMensaje()
+                {
+                    ID = correlationID,
+                    Contenido = contentBytes
+                };
+                responses.Add(wcfMessage);
+            }
+            
+            return responses;
+        }
+
 
         IConnector VerifyConnector()
         { 
@@ -156,6 +191,7 @@ namespace HCS.WinService
                 return _connectorMQ;
             }
         }
+
 
     }
 }

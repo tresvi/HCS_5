@@ -3,6 +3,7 @@ using HCS.Connector.Abstractions.Models;
 using IBM.WMQ;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
@@ -241,6 +242,7 @@ namespace HCS.Connector.IBMMQ
         {
             if (string.IsNullOrEmpty(mqRequest.InputQueue))
                 throw new ArgumentException("InputQueue must be specified", nameof(mqRequest));
+            List <byte[]> mqResponses = new List <byte[]>();
 
             try
             {
@@ -273,22 +275,30 @@ namespace HCS.Connector.IBMMQ
                 };
 
                 // GET
-                _queueIn.Get(msgGet, gmo);
+                bool goOn = true;
+                while (goOn)
+                { 
+                    _queueIn.Get(msgGet, gmo);
+                    string responseContent = msgGet.ReadString(msgGet.MessageLength);
+                    byte[] responseBytes = Encoding.UTF8.GetBytes(responseContent);
+                    mqResponses.Add(responseBytes);
 
-                // Procesar respuesta
-                string responseContent = msgGet.ReadString(msgGet.MessageLength);
-                byte[] responseBytes = Encoding.UTF8.GetBytes(responseContent);
+                    //Analizar para ver si es el mensaje final.
+                    //El bit de último mensaje en el grupo está encendido.
+                    if (msgGet.Feedback == MQC.MQFB_APPL_LAST) 
+                        break;
+                }
 
-                var response = new ResponseMessage(responseBytes, mqRequest.CorrelationID);
+                var response = new ResponseMessage(mqResponses, mqRequest.CorrelationID);
                 response.ReceivedAt = DateTime.UtcNow;
-
+                //response.
                 // Agrego metadata adicional
-                if (response.Metadata != null)
+                /*if (response.Metadata != null)
                 {
                     response.Metadata["MessageId"] = Convert.ToBase64String(msgGet.MessageId);
                     response.Metadata["PutDateTime"] = msgGet.PutDateTime;
                 }
-
+                */
                 Interlocked.Increment(ref _totalReceivedMessages);
 
                 return (response, msgGet.PutDateTime);

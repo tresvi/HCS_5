@@ -5,7 +5,7 @@ namespace HCS.Connector.Abstractions.Models
 {
     public class ResponseMessage
     {
-        public byte[] Content { get; set; }
+        public List<byte[]> Content { get; set; }
         public string CorrelationID { get; set; }
 
         /// <summary>
@@ -20,7 +20,7 @@ namespace HCS.Connector.Abstractions.Models
 
         public ResponseMessage() { }
 
-        public ResponseMessage(byte[] content, string correlationID)
+        public ResponseMessage(List<byte[]> content, string correlationID)
             : this()
         {
             Content = content ?? throw new ArgumentNullException(nameof(content));
