@@ -8,8 +8,10 @@ namespace HCS.Connector.Abstractions.Interfaces
     public interface IConnector: IDisposable
     {
         string Name { get; }
-        int MessagesSentCount { get; }
-        int ErrorCount { get; }
+        long TotalSentMessages { get; }
+        long TotalReceivedMessages { get; }
+        long TotalSentMessageErrors { get; }
+        long TotalReceivedMessageErrors { get; }
         DateTime? ConnectedFrom { get; }
         ConnectionStateEnum State { get; }
 
@@ -18,7 +20,7 @@ namespace HCS.Connector.Abstractions.Interfaces
         void Recycle();
         bool CheckHealth();
         TimeSpan Ping(string param = "");
-        void Send(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken);
+        void Send(RequestMessage request, TimeSpan sendTimeout, CancellationToken cancellationToken);
         ResponseMessage SendAndReceive(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken);
 
         Task OpenAsync(IConnectorParameters parameters);
@@ -26,7 +28,7 @@ namespace HCS.Connector.Abstractions.Interfaces
         Task RecycleAsync();
         Task<bool> CheckHealthAsync();
         Task<TimeSpan> PingAsync(string param = "");
-        Task SendAsync(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken);
+        Task SendAsync(RequestMessage request, TimeSpan sendTimeout, CancellationToken cancellationToken);
         Task<ResponseMessage> SendAndReceiveAsync(RequestMessage request, TimeSpan timeout, CancellationToken cancellationToken);
     }
 }

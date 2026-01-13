@@ -5,7 +5,26 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="IbmMQPlugin.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IBMMQDotnetClient" Version="9.3.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HCS.Connector.Abstractions\HCS.Connector.Abstractions.csproj" />
   </ItemGroup>
+
+	<!-- Solución para copiar DLLs nativas del paquete NuGet -->
+	<Target Name="CopyNativeLibs" AfterTargets="ResolvePackageAssets" BeforeTargets="Build">
+		<ItemGroup>
+			<NativeLibs Include="$(NuGetPackageRoot)ibmmqdotnetclient\9.3.5.1\runtimes\**\*.dll" />
+		</ItemGroup>
+		<Copy SourceFiles="@(NativeLibs)"
+				DestinationFolder="$(OutputPath)"
+				SkipUnchangedFiles="true"
+				Condition="'@(NativeLibs)' != ''" />
+	</Target>
 
 </Project>

@@ -12,11 +12,12 @@ namespace HCS.Connector.Dummy
         private const string NAME = "Dummy";
 
         public string Name { get { return NAME; } }
-        public int MessagesSentCount { get; private set; }
-        public int ErrorCount { get; private set; }
+        public long TotalSentMessages { get; }
+        public long TotalReceivedMessages { get; }
+        public long TotalSentMessageErrors { get; }
+        public long TotalReceivedMessageErrors { get; }
         public DateTime? ConnectedFrom { get; private set; }
         public ConnectionStateEnum State { get; private set; } = ConnectionStateEnum.Created;
-
 
         public bool CheckHealth()
         {
