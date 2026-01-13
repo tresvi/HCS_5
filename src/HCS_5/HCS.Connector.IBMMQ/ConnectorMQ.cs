@@ -256,8 +256,9 @@ namespace HCS.Connector.IBMMQ
                 // Preparar mensaje GET
                 var msgGet = new MQMessage
                 {
-                    CharacterSet = 1208,  // UTF-8
+                    //CharacterSet = 1208,  // UTF-8
                     Format = MQC.MQFMT_STRING,
+                    //Format = MQC.MQFMT_NONE,
                     MessageId = MQC.MQMI_NONE,
                     CorrelationId = correlationId
                 };
@@ -281,6 +282,7 @@ namespace HCS.Connector.IBMMQ
                     _queueIn.Get(msgGet, gmo);
                     string responseContent = msgGet.ReadString(msgGet.MessageLength);
                     byte[] responseBytes = Encoding.UTF8.GetBytes(responseContent);
+                    //byte[] responseBytes = msgGet.ReadBytes(msgGet.MessageLength);
                     mqResponses.Add(responseBytes);
 
                     //Analizar para ver si es el mensaje final.
@@ -291,7 +293,7 @@ namespace HCS.Connector.IBMMQ
 
                 var response = new ResponseMessage(mqResponses, mqRequest.CorrelationID);
                 response.ReceivedAt = DateTime.UtcNow;
-                //response.
+                
                 // Agrego metadata adicional
                 /*if (response.Metadata != null)
                 {
