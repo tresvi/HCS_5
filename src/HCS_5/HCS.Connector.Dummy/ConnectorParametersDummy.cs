@@ -8,7 +8,6 @@ namespace HCS.Connector.Dummy
         public TimeSpan ConnectionTimeout { get; set; }
         public TimeSpan CloseTimeout { get; set; }
 
-        public int EchoPrefix { get; set; }
         public int NumberOfEchoes { get; set; }
         public TimeSpan DelayBetweenMessages { get; set; }
         public TimeSpan ResponseDelay { get; set; }
