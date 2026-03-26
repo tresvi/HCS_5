@@ -17,7 +17,7 @@ namespace HCS.Connector.Abstractions.Models
         /// <summary>
         /// Timestamp de cuando se envió el mensaje
         /// </summary>
-        public DateTime? SentAt { get; private set; }
+        public DateTime? SentAt { get; set; }
 
         /// <summary>
         /// Metadata adicional específico del conector (opcional)
