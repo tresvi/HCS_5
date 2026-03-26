@@ -47,7 +47,7 @@ namespace HCS.WinService
             IContextChannel channel = OperationContext.Current?.Channel;
 
             swVerify.Start();
-            VerifyConnector();
+            //VerifyConnector();
             swVerify.Stop();
 
             try
